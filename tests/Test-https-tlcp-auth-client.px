@@ -1,0 +1,75 @@
+#!/usr/bin/env perl
+
+use strict;
+use warnings;
+use Socket;
+use Cwd;
+use WgetFeature qw(https);
+
+###############################################################################
+
+my $srcdir;
+if (@ARGV) {
+    $srcdir = shift @ARGV;
+} elsif (defined $ENV{srcdir}) {
+    $srcdir = $ENV{srcdir};
+}
+$srcdir = Cwd::abs_path("$srcdir");
+
+my $port = 35443;
+
+sub do_server {
+    my $tongsuo = $ENV{'TEST_TONGSUO_BINARY'} || '/opt/tongsuo/bin/openssl';
+
+    my $cmd = "$tongsuo s_server -accept 127.0.0.1:$port".
+        " -sign_cert $srcdir/certs/server-sm2-sign-cert.pem".
+        " -sign_key $srcdir/certs/server-sm2-sign-key.pem".
+        " -enc_cert $srcdir/certs/server-sm2-enc-cert.pem".
+        " -enc_key $srcdir/certs/server-sm2-enc-key.pem".
+        " -cert_chain $srcdir/certs/sm2-ca-chain.pem -build_chain".
+        " -enable_ntls -www -quiet";
+    
+    exec $cmd;
+}
+
+sub fork_server {
+    pipe(FROM_CHILD, TO_PARENT) or die "Cannot create pipe!";
+    select((select(TO_PARENT), $| = 1)[0]);
+
+    my $pid = fork();
+    if ($pid < 0) {
+        die "Cannot fork";
+    } elsif ($pid == 0) {
+        # child
+        close FROM_CHILD;
+        do_server(sub { print TO_PARENT "SYNC\n"; close TO_PARENT });
+        exit 0;
+    } else {
+        # parent
+        close TO_PARENT;
+        chomp(my $line = <FROM_CHILD>);
+        close FROM_CHILD;
+    }
+
+    return $pid;
+}
+
+my $pid = &fork_server;
+
+my $cmdline = $WgetTest::WGETPATH . " --secure-protocol=tlcp".
+                                    " --ciphers=ECDHE-SM2-SM4-CBC-SM3".
+                                    " --sign-cert=$srcdir/certs/client-sm2-sign-cert.pem".
+                                    " --sign-key=$srcdir/certs/client-sm2-sign-key.pem".
+                                    " --enc-cert=$srcdir/certs/client-sm2-enc-cert.pem".
+                                    " --enc-key=$srcdir/certs/client-sm2-enc-key.pem".
+                                    " --ca-certificate=$srcdir/certs/sm2-ca-chain.pem".
+                                    " https://localhost:$port/";
+
+my $code = system($cmdline . " 2>&1") >> 8;
+unlink "index.html";
+
+warn "Got code: $code\n" if $code;
+kill ('TERM', $pid);
+exit ($code != 0);
+
+# vim: et ts=4 sw=4

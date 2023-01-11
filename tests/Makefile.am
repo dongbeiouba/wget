@@ -138,6 +138,12 @@ PX_TESTS = \
              Test-https-crl.px \
              Test-https-badcerts.px
 
+if WITH_NTLS
+PX_TESTS += \
+             Test-https-tlcp.px \
+             Test-https-tlcp-auth-client.px
+endif
+
 EXTRA_DIST = FTPServer.pm FTPTest.pm HTTPServer.pm HTTPTest.pm \
              SSLTest.pm SSLServer.pm \
              WgetTests.pm WgetFeature.pm $(PX_TESTS) \

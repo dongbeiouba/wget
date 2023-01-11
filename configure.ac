@@ -579,6 +579,13 @@ AS_IF([test x"$with_ssl" = xopenssl], [
         ssl_library="openssl"
         LIBS="$LIBSSL $LIBS"
         AC_CHECK_FUNCS([RAND_egd])
+        AC_CHECK_FUNCS([NTLS_client_method], [
+	        AC_MSG_NOTICE([compiling in support for TLCP via Tongsuo])
+	        CFLAGS="-DHAVE_NTLS $CFLAGS"
+	        AC_DEFINE([HAVE_NTLS], [1], [Define if using Tongsuo.])
+          HAVE_NTLS=yes
+          AM_CONDITIONAL([WITH_NTLS], [test "X$HAVE_NTLS" = "Xyes"])
+        ])
       elif test x"$with_ssl" != x
       then
         AC_MSG_ERROR([--with-ssl=openssl was given, but SSL is not available.])
