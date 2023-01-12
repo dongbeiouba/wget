@@ -282,6 +282,12 @@ ssl_init (void)
       goto error;
 
 #endif
+#ifdef HAVE_NTLS
+    case secure_protocol_tlcp:
+      meth = NTLS_client_method ();
+      ssl_proto_version = NTLS_VERSION;
+      break;
+#endif
 
     default:
       logprintf (LOG_NOTQUIET, _("OpenSSL: unimplemented 'secure-protocol' option value %d\n"), opt.secure_protocol);
@@ -309,6 +315,12 @@ ssl_init (void)
     SSL_CTX_set_min_proto_version(ssl_ctx, ssl_proto_version);
 #endif
 
+#ifdef HAVE_NTLS
+  if (ssl_proto_version == NTLS_VERSION)
+    {
+      SSL_CTX_enable_ntls(ssl_ctx);
+    }
+#endif
   /* OpenSSL ciphers: https://www.openssl.org/docs/apps/ciphers.html
    *
    * Rules:
@@ -410,6 +422,29 @@ ssl_init (void)
                                      key_type_to_ssl_type (opt.private_key_type))
         != 1)
       goto error;
+
+#ifdef HAVE_NTLS
+  if (opt.sign_cert_file)
+    if (SSL_CTX_use_sign_certificate_file (ssl_ctx, opt.sign_cert_file,
+                                           key_type_to_ssl_type (opt.cert_type))
+        != 1)
+      goto error;
+  if (opt.sign_private_key)
+    if (SSL_CTX_use_sign_PrivateKey_file (ssl_ctx, opt.sign_private_key,
+                                          key_type_to_ssl_type (opt.private_key_type))
+        != 1)
+      goto error;
+  if (opt.enc_cert_file)
+    if (SSL_CTX_use_enc_certificate_file (ssl_ctx, opt.enc_cert_file,
+                                           key_type_to_ssl_type (opt.cert_type))
+        != 1)
+      goto error;
+  if (opt.enc_private_key)
+    if (SSL_CTX_use_enc_PrivateKey_file (ssl_ctx, opt.enc_private_key,
+                                          key_type_to_ssl_type (opt.private_key_type))
+        != 1)
+      goto error;
+#endif
 
   /* Since fd_write unconditionally assumes partial writes (and
      handles them correctly), allow them in OpenSSL.  */

@@ -231,11 +231,20 @@ struct options
     secure_protocol_tlsv1_1,
     secure_protocol_tlsv1_2,
     secure_protocol_tlsv1_3,
-    secure_protocol_pfs
+    secure_protocol_pfs,
+#ifdef HAVE_NTLS
+    secure_protocol_tlcp,
+#endif
   } secure_protocol;            /* type of secure protocol to use. */
   int check_cert;               /* whether to validate the server's cert */
   char *cert_file;              /* external client certificate to use. */
   char *private_key;            /* private key file (if not internal). */
+#ifdef HAVE_NTLS
+  char *sign_cert_file;         /* client signature certificate file */
+  char *sign_private_key;       /* client signature private key file */
+  char *enc_cert_file;          /* client encryption certificate file */
+  char *enc_private_key;        /* client encryption private key file */
+#endif
   enum keyfile_type {
     keyfile_pem,
     keyfile_asn1

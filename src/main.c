@@ -242,6 +242,12 @@ _Noreturn static void print_version (void);
 # define IF_SSL(a,b,c,d,e)
 #endif
 
+#ifdef HAVE_NTLS
+# define IF_TLCP(a,b,c,d,e) { a, b, c, d , e },
+#else
+# define IF_TLCP(a,b,c,d,e)
+#endif
+
 struct cmdline_option {
   char long_name[MAX_LONGOPTION];
   char short_name;
@@ -314,6 +320,8 @@ static struct cmdline_option option_data[] =
     { "dont-remove-listing", 0, OPT__DONT_REMOVE_LISTING, NULL, no_argument },
     { "dot-style", 0, OPT_VALUE, "dotstyle", -1 }, /* deprecated */
     { "egd-file", 0, OPT_VALUE, "egdfile", -1 },
+    IF_TLCP ( "enc-cert", 0, OPT_VALUE, "enccert", -1 )
+    IF_TLCP ( "enc-key", 0, OPT_VALUE, "enckey", -1 )
     { "exclude-directories", 'X', OPT_VALUE, "excludedirectories", -1 },
     { "exclude-domains", 0, OPT_VALUE, "excludedomains", -1 },
     { "execute", 'e', OPT__EXECUTE, NULL, required_argument },
@@ -425,6 +433,8 @@ static struct cmdline_option option_data[] =
     { "save-headers", 0, OPT_BOOLEAN, "saveheaders", -1 },
     IF_SSL ( "secure-protocol", 0, OPT_VALUE, "secureprotocol", -1 )
     { "server-response", 'S', OPT_BOOLEAN, "serverresponse", -1 },
+    IF_TLCP ( "sign-cert", 0, OPT_VALUE, "signcert", -1 )
+    IF_TLCP ( "sign-key", 0, OPT_VALUE, "signkey", -1 )
     { "span-hosts", 'H', OPT_BOOLEAN, "spanhosts", -1 },
     { "spider", 0, OPT_BOOLEAN, "spider", -1 },
     { "start-pos", 0, OPT_VALUE, "startpos", -1 },
@@ -847,7 +857,7 @@ HTTP options:\n"),
     N_("\
 HTTPS (SSL/TLS) options:\n"),
     N_("\
-       --secure-protocol=PR        choose secure protocol, one of auto, SSLv2,\n\
+       --secure-protocol=PR        choose secure protocol, one of auto, TLCP, SSLv2,\n\
                                      SSLv3, TLSv1, TLSv1_1, TLSv1_2, TLSv1_3 and PFS\n"),
     N_("\
        --https-only                only follow secure HTTPS links\n"),
@@ -855,10 +865,22 @@ HTTPS (SSL/TLS) options:\n"),
        --no-check-certificate      don't validate the server's certificate\n"),
     N_("\
        --certificate=FILE          client certificate file\n"),
+# ifdef HAVE_NTLS
+    N_("\
+       --sign-cert=FILE            client signature certificate file\n"),
+    N_("\
+       --enc-cert=FILE             client encryption certificate file\n"),
+# endif
     N_("\
        --certificate-type=TYPE     client certificate type, PEM or DER\n"),
     N_("\
        --private-key=FILE          private key file\n"),
+# ifdef HAVE_NTLS
+    N_("\
+       --sign-key=FILE             signature private key file\n"),
+    N_("\
+       --enc-key=FILE              encryption private key file\n"),
+# endif
     N_("\
        --private-key-type=TYPE     private key type, PEM or DER\n"),
     N_("\

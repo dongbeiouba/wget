@@ -1,0 +1,95 @@
+name: CI
+
+on: [workflow_dispatch, pull_request, push]
+
+jobs:
+  build-with-tongsuo:
+    runs-on: ${{ matrix.builder }}
+    timeout-minutes: 60
+    strategy:
+      matrix:
+        builder: [macos-latest, ubuntu-latest]
+    name: "build-${{ matrix.builder }}"
+    steps:
+      - name: install dependencies on Linux
+        if: ${{ matrix.builder == 'ubuntu-latest' }}
+        run: |
+          sudo apt-get install -y automake autoconf autoconf-archive autopoint \
+            flex texinfo gperf pkg-config make libhttp-daemon-perl \
+            libio-socket-ssl-perl libidn2-dev gettext texlive python3 valgrind \
+            language-pack-tr language-pack-ru
+      - name: 'brew bundle'
+        if: ${{ matrix.builder == 'macos-latest' }}
+        run: |
+          echo libtool automake autoconf autoconf-archive | xargs -Ix -n1 echo brew '"x"' > /tmp/Brewfile
+      - name: 'brew install'
+        if: ${{ matrix.builder == 'macos-latest' }}
+        run: brew update && for i in 1 2 3; do brew bundle install --no-lock --file /tmp/Brewfile && break || sleep 1; done
+      - name: checkout tongsuo
+        uses: actions/checkout@v2
+        with:
+          repository: Tongsuo-Project/Tongsuo
+          ref: 8.3-stable
+          path: Tongsuo
+      - name: install Tongsuo
+        working-directory: ./Tongsuo
+        run: |
+          ./config --prefix=${RUNNER_TEMP}/tongsuo enable-ntls
+          make -s -j4
+          make install_sw
+      - uses: actions/checkout@v3
+        with:
+          path: wget
+      - name: build wget
+        working-directory: ./wget
+        run: |
+          ./bootstrap
+          autoreconf -fi
+          ./configure --with-ssl=openssl --with-libssl-prefix=${RUNNER_TEMP}/tongsuo --disable-ntlm
+          make -s -j4
+
+  Check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    strategy:
+      matrix:
+        check: [check]
+    name: "${{ matrix.check }}"
+    steps:
+      - name: install dependencies on Linux
+        run: |
+          sudo apt-get install -y automake autoconf autoconf-archive autopoint \
+            flex texinfo gperf pkg-config make libhttp-daemon-perl \
+            libio-socket-ssl-perl libidn2-dev gettext texlive python3 valgrind \
+            language-pack-tr language-pack-ru
+      - name: checkout tongsuo
+        uses: actions/checkout@v2
+        with:
+          repository: Tongsuo-Project/Tongsuo
+          ref: 8.3-stable
+          path: Tongsuo
+      - name: install Tongsuo
+        working-directory: ./Tongsuo
+        run: |
+          ./config --prefix=${RUNNER_TEMP}/tongsuo enable-ntls no-shared
+          make -s -j4
+          make install_sw
+      - uses: actions/checkout@v3
+        with:
+          path: wget
+      - name: build wget
+        working-directory: ./wget
+        run: |
+          ./bootstrap
+          autoreconf -fi
+          ./configure --with-ssl=openssl --with-libssl-prefix=${RUNNER_TEMP}/tongsuo --disable-ntlm
+          make -s -j4
+      - name: check
+        working-directory: ./wget
+        run: |
+          make -j4 ${{ matrix.check }} TEST_TONGSUO_BINARY=${RUNNER_TEMP}/tongsuo/bin/openssl
+      - name: debug
+        if: ${{ failure() }}
+        working-directory: ./wget
+        run: |
+          cat tests/test-suite.log

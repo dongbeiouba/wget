@@ -198,6 +198,10 @@ static const struct {
 #ifdef HAVE_SSL
   { "egdfile",          &opt.egd_file,          cmd_file },
 #endif
+#ifdef HAVE_NTLS
+  { "enccert",          &opt.enc_cert_file,     cmd_file },
+  { "enckey",           &opt.enc_private_key,   cmd_file },
+#endif
   { "excludedirectories", &opt.excludes,        cmd_directory_vector },
   { "excludedomains",   &opt.exclude_domains,   cmd_vector },
   { "followftp",        &opt.follow_ftp,        cmd_boolean },
@@ -323,6 +327,10 @@ static const struct {
   { "serverresponse",   &opt.server_response,   cmd_boolean },
   { "showalldnsentries", &opt.show_all_dns_entries, cmd_boolean },
   { "showprogress",     &opt.show_progress,     cmd_spec_progressdisp },
+#ifdef HAVE_NTLS
+  { "signcert",          &opt.sign_cert_file,     cmd_file },
+  { "signkey",           &opt.sign_private_key,   cmd_file },
+#endif
   { "spanhosts",        &opt.spanhost,          cmd_boolean },
   { "spider",           &opt.spider,            cmd_boolean },
   { "startpos",         &opt.start_pos,         cmd_bytes },
@@ -1755,6 +1763,9 @@ cmd_spec_secure_protocol (const char *com, const char *val, void *place)
     { "tlsv1_2", secure_protocol_tlsv1_2 },
     { "tlsv1_3", secure_protocol_tlsv1_3 },
     { "pfs", secure_protocol_pfs },
+#ifdef HAVE_NTLS
+    { "tlcp", secure_protocol_tlcp },
+#endif
   };
   int ok = decode_string (val, choices, countof (choices), place);
   if (!ok)
